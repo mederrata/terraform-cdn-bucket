@@ -1,1 +1,1 @@
-# terraform-cdn-bucket
+# terraform-cloudfront-bucket
