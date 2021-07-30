@@ -15,7 +15,7 @@ provider "aws" {
   default_tags {
     tags = {
       Terraform = "true"
-      Anisible = "false"
+      Git = "mederrata.terraform-cloudfront-bucket"
     }
   }
 }
@@ -53,13 +53,17 @@ resource "aws_s3_bucket" "cloudfront_log_bucket" {
   }
 }
 
+resource "aws_cloudfront_origin_access_identity" "s3_origin_identity" {
+  comment = "cdn_bucket"
+}
+
 resource "aws_cloudfront_distribution" "s3_distribution" {
   origin {
     domain_name = aws_s3_bucket.cloudfront_bucket.bucket_regional_domain_name
     origin_id   = var.cloudfront_bucket
 
     s3_origin_config {
-      origin_access_identity = "origin-access-identity/cloudfront/ABCDEFG1234567"
+      origin_access_identity = "${aws_cloudfront_origin_access_identity.s3_origin_identity.cloudfront_access_identity_path}"
     }
   }
 
@@ -73,7 +77,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     prefix          = ""
   }
 
-  aliases = ["domain_name"]
+  aliases = ["${var.domain_name}"]
 
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -88,7 +92,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
       }
     }
 
-    viewer_protocol_policy = "allow-all"
+    viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
     default_ttl            = 3600
     max_ttl                = 86400
@@ -128,6 +132,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
 
   tags = {
     Environment = "production"
+    Name = "public-cdn"
   }
 
   viewer_certificate {
