@@ -20,9 +20,16 @@ provider "aws" {
   }
 }
 
+resource "aws_cloudfront_origin_access_identity" "s3_origin_identity" {
+  comment = "cdn_bucket"
+}
+
 resource "aws_s3_bucket" "cloudfront_bucket" {
   bucket = var.cloudfront_bucket
   acl = "private"
+
+  
+  
 
   server_side_encryption_configuration {
     rule {
@@ -31,8 +38,30 @@ resource "aws_s3_bucket" "cloudfront_bucket" {
       }
     }
   }
+
   tags = {
     Name = "public-cdn-bucket"
+  }
+}
+
+resource "aws_s3_bucket_policy" "cloudfront_bucket_policy" {
+  bucket = aws_s3_bucket.cloudfront_bucket.id
+  policy = jsonencode({
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "TerraformS3CDN",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "${aws_cloudfront_origin_access_identity.s3_origin_identity.iam_arn}"
+            },
+            "Action": "s3:GetObject",
+            "Resource": "${aws_s3_bucket.cloudfront_bucket.arn}/*"
+        }
+    ]
+  })
+  tags = {
+    Name = "public-cdn-bucket-policy"
   }
 }
 
@@ -51,10 +80,6 @@ resource "aws_s3_bucket" "cloudfront_log_bucket" {
   tags = {
     Name = "public-cdn-bucket"
   }
-}
-
-resource "aws_cloudfront_origin_access_identity" "s3_origin_identity" {
-  comment = "cdn_bucket"
 }
 
 resource "aws_cloudfront_distribution" "s3_distribution" {
@@ -77,7 +102,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     prefix          = ""
   }
 
-  aliases = ["${var.domain_name}"]
+  #aliases = ["${var.domain_name}"]
 
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
