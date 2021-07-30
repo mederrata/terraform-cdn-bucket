@@ -60,9 +60,6 @@ resource "aws_s3_bucket_policy" "cloudfront_bucket_policy" {
         }
     ]
   })
-  tags = {
-    Name = "public-cdn-bucket-policy"
-  }
 }
 
 
